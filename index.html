@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        #quizContainer{
+            font-family: Verdana, sans-serif;;
+        }
+        #qAnswers {
+            margin-top: 16px;
+            margin-left:16px;
+        }
+        #qAnswers input {
+            display: inline-block;
+            width:1%;
+            margin-bottom:8px;
+        }
+        #qAnswers label {
+            display: inline-block;
+            width:98%;
+        }
+    </style>
+</head>
+<body>
+<div id="quizContainer">
+    What is your name? <input type="text" id="txtName"/> <button id="btnName">Set Name</button>
+</div>
+
+
+<script type="text/javascript">
+    var allQuestions = [];
+
+    allQuestions.push({question: "Who is the first skater to perform the \"McTwist\" on a half-pipe?", choices: ["Tony Hawk", "Mark Gonzales", "Mike McGill", "Kevin Staab"], correctAnswer:2});
+    allQuestions.push({question: "Which skater is credited for performing the first \"ollie\" on flatland?", choices: ["Rodney Mullen", "Mark Gonzales", "Natas Kaupus", "Tommy Guerrero"], correctAnswer:0});
+    allQuestions.push({question: "Which skater is known as \"The Donger\"?", choices: ["Christian Hosoi", "Mark Gonzales", "Kien Lieu", "Tommy Guerrero"], correctAnswer:2});
+    allQuestions.push({question: "Who was the Bones Brigade searching for in 1987?", choices: ["George Powell", "Won Ton Animal Chin", "The Outlaw", "A skateboard thief"], correctAnswer:1});
+    allQuestions.push({question: "What was the name of the video released by H-Street in 1989?", choices: ["Shackle Me Not", "This Is Not The New H-Street Video", "Next Generation", "Hokus Pokus"], correctAnswer:3});
+    allQuestions.push({question: "What music group sings \"Dollar on a Platter\" during Dave Braves' clip in Hokus Pokus? ", choices: ["Wheezing Maniac", "Kirk and the Jerks", "Sub Society", "Loopzilla"], correctAnswer:0});
+
+    var objQuiz = {
+        quizName: "1980s Skateboarding Quiz",
+        quizTakerName: "",
+        questions: allQuestions,
+        quizTakerAnswers: [],
+        quizTakerScore: 0,
+        currentQuestion: 0,
+        currentAnswerDiv: "",
+        setCurrentQuestion: function () {
+            this.currentQuestion += 1;
+        },
+        setAnswer: function(answer){
+            this.quizTakerAnswers.push(answer);
+            if(this.currentQuestion == this.questions.length-1){
+                this.scoreQuiz();
+            }else{
+                this.setCurrentQuestion();
+                this.currentAnswerDiv.removeEventListener("click", getAnswer);
+                this.nextQuestion();
+            }
+        },
+        setName: function (name){
+            this.quizTakerName = name;
+            this.startQuiz();
+        },
+        scoreQuiz: function(){
+            var totalScore = 0;
+            var self = this;
+            this.questions.forEach(function(v,i){
+                if(v.correctAnswer==self.quizTakerAnswers[i]){
+                    totalScore++;
+                }
+            });
+            divContainer.innerHTML =  this.quizTakerName + ", your quiz score is: " + totalScore + "/" + this.questions.length;
+        },
+        startQuiz: function(){
+            var self = this;
+            if(this.quizTakerName){
+                btnName.onclick = null;
+                divContainer.innerHTML = "Alright " + this.quizTakerName + "... We will begin your quiz in 3 seconds.<br /><br ";
+                setTimeout( function(){
+                    self.nextQuestion();
+                },3000);
+            }
+        },
+        nextQuestion: function (){
+            divContainer.innerHTML = "";
+            var currentIndex = this.currentQuestion;
+            var current = this.questions[currentIndex];
+            var divQuestion = document.createElement("div");
+            divQuestion.id = "qQuestions";
+            var divAnswers = document.createElement("div");
+            var currentQuestionNumber = currentIndex+1;
+            divAnswers.id = "qAnswers";
+            divQuestion.innerHTML = "QUESTION " + currentQuestionNumber + ": " + current.question;
+            divContainer.appendChild(divQuestion);
+            divAnswers.addEventListener("click", getAnswer);
+            this.currentAnswerDiv = divAnswers;
+            divQuestion.appendChild(divAnswers);
+
+            current.choices.forEach(function(v,i,a){
+                var radioID =  "q" + i;
+                var labelID =  "lbl" + i;
+                var label = document.createElement("label");
+                label.id = labelID;
+                label.htmlFor = radioID;
+                var radioChoice = document.createElement("input");
+                radioChoice.name = "q" + currentIndex;
+                radioChoice.id = radioID;
+                radioChoice.type = "radio";
+                radioChoice.value = i;
+                divAnswers.appendChild(radioChoice);
+                var cRadio = document.getElementById(radioID);
+                insertAfter(label,cRadio);
+                var cLabel = document.getElementById(labelID);
+                var labelText = document.createTextNode(v);
+                cLabel.appendChild(labelText);
+            });
+
+
+
+        }
+    }
+
+    function insertAfter(objToInsert,objAfterThisObject){ // there is no insertAfter... so using MDN suggestion
+        objQuiz.currentAnswerDiv.insertBefore(objToInsert,objAfterThisObject.nextSibling);
+    }
+
+    function getAnswer(e){ // listner for answers
+        var myAnswer = e.target;
+        objQuiz.setAnswer(myAnswer.value);
+    }
+
+    document.title = objQuiz.quizName;
+    var txtName = document.getElementById("txtName");
+    var btnName = document.getElementById("btnName");
+    var divContainer = document.getElementById("quizContainer");
+
+    btnName.onclick = function(){
+        objQuiz.setName(txtName.value);
+        this.onclick = null;
+    };
+</script>
+</body>
+</html>
