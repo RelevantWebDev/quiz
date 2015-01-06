@@ -1,0 +1,62 @@
+[
+	{
+		"question": "Who is the first skater to perform the \"McTwist\" on a half-pipe?",
+		"choices": [
+			"Tony Hawk",
+			"Mark Gonzales",
+			"Mike McGill",
+			"Kevin Staab"
+		],
+		"correctAnswer": 2
+	},
+	{
+		"question": "Which skater is credited for performing the first \"ollie\" on flatland?",
+		"choices": [
+			"Rodney Mullen",
+			"Mark Gonzales",
+			"Natas Kaupus",
+			"Tommy Guerrero"
+		],
+		"correctAnswer": 0
+	},
+	{
+		"question": "Which skater is known as \"The Donger\"?",
+		"choices": [
+			"Christian Hosoi",
+			"Mark Gonzales",
+			"Kien Lieu",
+			"Tommy Guerrero"
+		],
+		"correctAnswer": 2
+	},
+	{
+		"question": "Who was the Bones Brigade searching for in 1987?",
+		"choices": [
+			"George Powell",
+			"Won Ton Animal Chin",
+			"The Outlaw",
+			"A skateboard thief"
+		],
+		"correctAnswer": 1
+	},
+	{
+		"question": "What was the name of the video released by H-Street in 1989?",
+		"choices": [
+			"Shackle Me Not",
+			"This Is Not The New H-Street Video",
+			"Next Generation",
+			"Hokus Pokus"
+		],
+		"correctAnswer": 3
+	},
+	{
+		"question": "What music group sings \"Dollar on a Platter\" during Dave Braves' clip in Hokus Pokus? ",
+		"choices": [
+			"Wheezing Maniac",
+			"Kirk and the Jerks",
+			"Sub Society",
+			"Loopzilla"
+		],
+		"correctAnswer": 0
+	}
+]
