@@ -1,94 +1,137 @@
 <!DOCTYPE html>
 <html>
-<head lang="en">
+<head>
     <meta charset="UTF-8">
     <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="boot.css">
     <style>
-        body {
-            margin-left:30%;
+        .question-block {
         }
-        #quizContainer{
-            font-family: Verdana, sans-serif;
+        .answers-block, .quiz-container, .divNav {
+            padding:10px;
         }
-        #qAnswers {
-            margin-top: 16px;
-            margin-left:16px;
+
+        .answers-block label {
+            font-weight:normal;
+            padding-left:8px;
         }
-        #qAnswers input {
-            display: inline-block;
-            width:1%;
-            margin-bottom:8px;
+        .divNav {
+            margin-left:10px;
         }
-        #qAnswers label {
-            display: inline-block;
-            width:98%;
-        }
-        #scoresheet {
-            font-family: Verdana, sans-serif;
+        .btn {
+            margin-right:10px;
         }
     </style>
 </head>
 <body>
-<div id="quizContainer"></div>
-
+<main class="container">
+    <div class="row">
+        <div id="quiz-title" class="col-md-12">
+            <h1></h1>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <div id="skateBoard" class="quiz-container"></div>
+        </div>
+    </div>
+</main>
+<br />
+<div>
+    <div id="skateBoardingMore" class="quiz-container"></div>
+</div>
 
 <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
 <script type="text/javascript">
         var objQuiz = {
-            quizName: "Old School Skateboarding Quiz",
+            quizName: "",
+            quizID: "",
+            DOMattributes: {
+                btnScore:{
+                    innerHTML: "Score Quiz",
+                    class: ["btn","btn-default"],
+                    disabled: true
+                },
+                divScoreSheet:{
+                    class: ["scoresheet"]
+                }
+            },
+            DOMobjects: {btnScore:"",divContainer:"",divScoreSheet:"",divAnswers:""},
             quizTakerName: "",
             questions: [],
             quizTakerAnswers: [],
             quizTakerScore: 0,
             currentQuestion: 0,
-            currentAnswerDiv: "",
+            //currentAnswerDiv: "",
+            createElement: function (elementType,elementAttributes) {
+                var thisElement = document.createElement(elementType);
+                for (var attr in elementAttributes){
+                    if(elementAttributes.hasOwnProperty(attr)){
+                        switch(attr.toLocaleLowerCase()){
+                            case "class":
+                                if(Array.isArray(elementAttributes[attr])){
+                                    elementAttributes[attr].forEach(function(v){
+                                        thisElement.classList.add(v);
+                                    },thisElement);
+                                }
+                                break;
+                            case "innerhtml":
+                                thisElement.innerHTML = elementAttributes[attr];
+                                break;
+                            case "onclick":
+                                thisElement.onclick = elementAttributes[attr];
+                                break;
+                            default:
+                                thisElement.setAttribute(attr,elementAttributes[attr]);
+                        }
+                    }
+                }
+                return thisElement;
+            },
             init: function () {
                 var xhr = new XMLHttpRequest();
                 var self = this;
                 xhr.onreadystatechange = function() {
                     if(xhr.readyState===4){
                         self.questions = JSON.parse(xhr.responseText).slice(0);
-                        // populate questions
                         self.quizTakerAnswers.length = self.questions.length;
-                        // initialize answers array
-                        // changing an array's length (which we're doing in quizTakerAnswers) doesn't set any values
-                        // so... we're doing it manually since we're checking against undefined later
+                        // Make sure the answers array is initialized with actual values (just setting the length doesn't actually populate the array)
                         for(var x = 0;x<self.quizTakerAnswers.length;x++){
                             self.quizTakerAnswers[x] = undefined;
                         }
-
-                        var btnScore = document.createElement("button");
-                        btnScore.id = "btnScore";
-                        btnScore.innerHTML = "Score Quiz";
-                        btnScore.style.display = "none";
-                        btnScore.onclick = self.scoreQuiz;
-                        btnScore.disabled = true;
-                        var divNextSibling = self.divContainer.nextSibling;
-                        var parentNode = divNextSibling.parentNode;
+                        // Score quiz button
+                        var btnScore = self.createElement("button",self.DOMattributes.btnScore);
+                        btnScore.id = "btnScore-" + self.quizID; // todo: figure out how to integrate this into object literal
+                        btnScore.onclick = self.scoreQuiz.bind(self); // todo: figure out how to integrate this into object literal
+                        // Insert score quiz button after the quiz container
+                        var divNextSibling = self.DOMobjects.divContainer.nextSibling,
+                            parentNode = divNextSibling.parentNode;
                         parentNode.insertBefore(btnScore,divNextSibling);
-                        divNextSibling = self.divContainer.nextSibling.nextSibling;
+                        self.DOMobjects.btnScore = document.getElementById("btnScore-" + self.quizID);
+                        // Scoresheet
+                        var divScoreSheet = self.createElement("div",self.DOMattributes.divScoreSheet);
+                        divScoreSheet.id = "scoresheet-" + self.quizID; // todo: figure out how to integrate this into object literal
+                        // Insert scoresheet after score quiz button
+                        divNextSibling = self.DOMobjects.divContainer.nextSibling.nextSibling;
                         parentNode = divNextSibling.parentNode;
-
-                        var divScoreSheet = document.createElement("div");
-                        divScoreSheet.id = "scoresheet";
-                        divScoreSheet.style.display = "none";
                         parentNode.insertBefore(divScoreSheet,divNextSibling);
+                        self.DOMobjects.divScoreSheet = document.getElementById("scoresheet-" + self.quizID);
                         self.startQuiz();
                     }
                 };
-                xhr.open("GET","questions.json",false); // setting false makes the call synchronous (wait until result is returned before continuing processing)
+                xhr.open("GET","questions.json",true); //  setting false makes the call synchronous (wait until result is returned before continuing processing)
                 xhr.send(null);
             },
             setCurrentQuestion: function () {
                 this.currentQuestion += 1;
             },
             getAnswer:  function(e){ // listener for answers
-                // were using [object].getAnswer method as the event listener for btnAnswer.onclick... so "this" will be the button object...
-                // so, we're using the fully qualified reference to [object] instead of "this"
-                var currentTarget = e.target;
+                var currentTarget = e.target,
+                    self = this;
                 if(currentTarget.tagName.toLocaleLowerCase()==="input"){
-                    var realCurrentQuestionIndex = objQuiz.currentQuestion;
-                    objQuiz.quizTakerAnswers.splice(objQuiz.currentQuestion,1,currentTarget.value);
+                    var realCurrentQuestionIndex = this.currentQuestion;
+                    this.quizTakerAnswers.splice(this.currentQuestion,1,currentTarget.value);
                     // clear styling
                     var answers = document.getElementsByTagName("label");
                     for(var i = 0;i<answers.length;++i){
@@ -96,16 +139,16 @@
                     }
                     currentTarget.nextSibling.style.fontWeight = "bold";
 
-                    if(!(realCurrentQuestionIndex == objQuiz.questions.length-1)){
+                    if(!(realCurrentQuestionIndex == this.questions.length-1)){
                         setTimeout(function(){
-                            objQuiz.setCurrentQuestion();
-                            objQuiz.getQuestion();
-                            objQuiz.populateScoreSheet();
+                            self.setCurrentQuestion();
+                            self.getQuestion();
+                            self.populateScoreSheet();
                         },500);
 
                     }else{
                         // check to see if there are any un-answered questions
-                        objQuiz.populateScoreSheet();
+                        self.populateScoreSheet();
                     }
                 }
             },
@@ -119,23 +162,24 @@
                 this.init();
             },
             scoreQuiz: function(){
-                var totalScore = 0;
-                objQuiz.questions.forEach(function(v,i){
-                    if(+v.correctAnswer===+objQuiz.quizTakerAnswers[i]){ // using unary operator (for now) to force conversion to numeric [double check this if -1?]
+                var totalScore = 0,
+                        self = this;
+                this.questions.forEach(function(v,i){
+                    if(+v.correctAnswer===+self.quizTakerAnswers[i]){ // using unary operator (for now) to force conversion to numeric [double check this if -1?]
                         totalScore++;
                     }
                 });
-                var divScoreSheet = document.getElementById("scoresheet");
-                var btnScore = document.getElementById("btnScore");
+                var divScoreSheet = this.DOMobjects.divScoreSheet;
+                var btnScore = this.DOMobjects.btnScore;
                 divScoreSheet.style.display = "none";
                 btnScore.style.display = "none";
-                objQuiz.divContainer.innerHTML =  objQuiz.quizTakerName + ", your quiz score is: " + totalScore + "/" + objQuiz.questions.length;
+                this.DOMobjects.divContainer.innerHTML =  this.quizTakerName + ", your quiz score is: " + totalScore + "/" + this.questions.length;
             },
             startQuiz: function(){
                 var self = this;
                 if(this.quizTakerName){
-                    this.divContainer.innerHTML = "Alright " + this.quizTakerName + ", Compiling questions... <span id=\"compile\"></span><br /><br> ";
-                    var compile = document.getElementById("compile");
+                    this.DOMobjects.divContainer.innerHTML = "Alright " + this.quizTakerName + ", Compiling questions... <span id=\"compile-" + this.quizID + "\"></span><br /><br> ";
+                    var compile = document.getElementById("compile-" + this.quizID);
                     var intervalC = setInterval(function(){
                         if(compile.innerHTML==""){
                             compile.innerHTML = "010110";
@@ -150,18 +194,14 @@
                     setTimeout( function(){
                         clearInterval(intervalC);
                         self.getQuestion();
-                        self.divContainer.nextSibling.style.marginTop = "16px";
-                        self.divContainer.nextSibling.style.marginLeft = "16px";
-                        self.divContainer.nextSibling.style.display = "block";
-                        self.divContainer.nextSibling.nextSibling.style.marginTop = "10px";
-                        self.divContainer.nextSibling.nextSibling.style.marginLeft = "16px";
-                        self.divContainer.nextSibling.nextSibling.style.display = "block";
+                        self.DOMobjects.divContainer.nextSibling.style.display = "block";
+                        self.DOMobjects.divContainer.nextSibling.nextSibling.style.display = "block";
                         self.populateScoreSheet();
                     },2000);
                 }
             },
             populateScoreSheet: function() {
-                var sSheet = document.getElementById("scoresheet");
+                var sSheet = this.DOMobjects.divScoreSheet;
                 sSheet.innerHTML = "";
                 var iCount = 0;
                 this.quizTakerAnswers.forEach(function(v,i){
@@ -169,23 +209,25 @@
                     var sMessage = "";
                     if(typeof v !== "undefined"){
                         myQuestion.style.fontWeight = "bold";
-                        sMessage = "answered";
+                        sMessage = "(answered)";
                         iCount++;
                     }else{
+                        myQuestion.style.fontWeight = "normal";
                         myQuestion.style.fontStyle = "italic";
                         myQuestion.style.color = "silver";
-                        sMessage = "un-answered";
+                        sMessage = "[un-answered]";
                     }
 
-                    myQuestion.innerHTML = "Question #" + (i+1) + " = [" + sMessage + "]";
+                    myQuestion.innerHTML = "Question #" + (i+1) + " = " + sMessage + "";
                     sSheet.appendChild(myQuestion);
                 });
-                if(iCount===this.quizTakerAnswers.length-1){
-                    var btnScoreMe = document.getElementById("btnScore");
+                if(iCount===this.quizTakerAnswers.length){
+                    var btnScoreMe = this.DOMobjects.btnScore;
                     btnScoreMe.disabled = false;
+                    btnScoreMe.classList.remove("btn-default");
+                    btnScoreMe.classList.add("btn-success");
                     var scoreText = btnScoreMe.nextSibling;
                     scoreText.style.display = "inline-block";
-                    console.log("all done");
                 }
             },
             displayNavButtons: function (bBack,bFwd) {
@@ -216,27 +258,30 @@
                 }
             },
             getQuestion: function (){
-                if(this.currentAnswerDiv){
-                    this.currentAnswerDiv.removeEventListener("click", objQuiz.getAnswer);
+                this.DOMobjects.divContainer.innerHTML = "";
+                var currentIndex = this.currentQuestion,
+                    getAnswerHandler = objQuiz.getAnswer.bind(objQuiz),
+                    current = this.questions[currentIndex],
+                    divQuestion = document.createElement("div"),
+                    divAnswers = document.createElement("div"),
+                    currentQuestionNumber = currentIndex+1;
+                if(this.DOMobjects.divAnswers){
+                    this.DOMobjects.divAnswers.removeEventListener("click", getAnswerHandler);
                 }
-                this.divContainer.innerHTML = "";
-                var currentIndex = this.currentQuestion;
-                var current = this.questions[currentIndex];
-                var divQuestion = document.createElement("div");
-                var divAnswers = document.createElement("div");
-                var currentQuestionNumber = currentIndex+1;
-                divQuestion.id = "qQuestions";
-                divAnswers.id = "qAnswers";
-                divQuestion.innerHTML = "QUESTION " + currentQuestionNumber + " (of " + this.questions.length + "): " + current.question;
+                divQuestion.id = "questions-" + this.quizID;
+                divAnswers.id = "answers-" + this.quizID ;
+                divQuestion.innerHTML = "<h4>QUESTION " + currentQuestionNumber + " (of " + this.questions.length + "): " + current.question + "</h4>";
                 divQuestion.style.display = "none";
-                this.divContainer.appendChild(divQuestion);
-                divAnswers.addEventListener("click",objQuiz.getAnswer);
-                this.currentAnswerDiv = divAnswers;
+                divQuestion.classList.add("question-block");
+                this.DOMobjects.divContainer.appendChild(divQuestion);
+                divAnswers.addEventListener("click",getAnswerHandler);
+                divAnswers.classList.add("answers-block");
+                this.DOMobjects.divAnswers = divAnswers;
                 divQuestion.appendChild(divAnswers);
 
                 current.choices.forEach(function(v,i){
-                    var radioID =  "q" + i;
-                    var labelID =  "lbl" + i;
+                    var radioID =  "q-" + this.quizID + i;
+                    var labelID =  "lbl-" + this.quizID + i;
                     var label = document.createElement("label");
                     var radioChoice = document.createElement("input");
                     label.id = labelID;
@@ -253,51 +298,57 @@
 
                     divAnswers.appendChild(radioChoice);
                     var cRadio = document.getElementById(radioID);
-                    objQuiz.insertAfter(label,cRadio);
+                    divAnswers.appendChild(label);
                     var cLabel = document.getElementById(labelID);
+                    var htmlBR = document.createElement("br");
+                    divAnswers.appendChild(htmlBR);
                     if(cRadio.checked){
                         cLabel.style.fontWeight = "bold";
                     }
                     var labelText = document.createTextNode(v);
                      cLabel.appendChild(labelText);
-                });
-
+                },this);
                 var divNavContainer = document.createElement("div");
                 divNavContainer.id = "divNav";
+                divNavContainer.classList.add("divNav");
                 var btnBack = document.createElement("button");
                 btnBack.id = "btnBack";
+                btnBack.classList.add("btn","btn-default");
                 btnBack.innerHTML = "&lt; Previous Question";
                 btnBack.disabled = true;
                 var btnFwd = document.createElement("button");
                 btnFwd.id = "btnFwd";
                 btnFwd.innerHTML = "Next Question &gt";
+                btnFwd.classList.add("btn","btn-default");
                 btnFwd.disabled = true;
                 divNavContainer.appendChild(btnBack);
                 divNavContainer.appendChild(btnFwd);
                 divNavContainer.addEventListener("click",this.doNavigate);
                 divAnswers.appendChild(divNavContainer);
                 this.displayNavButtons(btnBack,btnFwd);
-                $("#qQuestions").fadeIn("slow");
+                $("#" + divQuestion.id).fadeIn("slow");
             },
-            insertAfter: function (objToInsert,objAfterThisObject) { // there is no insertAfter... so using MDN suggestion
-                this.currentAnswerDiv.insertBefore(objToInsert,objAfterThisObject.nextSibling);
-            },
-            loadQuiz: function (resetMe) {
+            loadQuiz: function (quizID,quizName) {
                 // check for existing name
-                document.title = this.quizName;
-                if(!localStorage.getItem('quiztakername') || resetMe){
+                this.quizName = quizName;
+               // document.title = this.quizName;
+                this.quizID = quizID;
+                this.DOMobjects.divContainer = document.getElementById(quizID);
+                $("#quiz-title h1").text(this.quizName);
+                //localStorage.clear();
+                if(!localStorage.getItem('quiztakername')){
                     var textNode = document.createTextNode("What is your name?");
-                    this.divContainer.appendChild(textNode);
+                    this.DOMobjects.divContainer.appendChild(textNode);
                     var txtBox = document.createElement("input");
                     txtBox.type = "text";
-                    txtBox.id = "txtName";
-                    txtBox.addEventListener("keyup",this.checkKey);
-                    this.divContainer.appendChild(txtBox);
+                    txtBox.id = "txtName-" + this.quizID;
+                    txtBox.addEventListener("keyup",this.checkKey.bind(this));
+                    this.DOMobjects.divContainer.appendChild(txtBox);
                     var btnName = document.createElement("button");
-                    btnName.id = "btnName";
-                    btnName.onclick = this.submitName;
+                    btnName.id = "btnName-" + this.quizID;
+                    btnName.onclick = this.submitName.bind(this);
                     btnName.innerHTML = "Submit";
-                    this.divContainer.appendChild(btnName);
+                    this.DOMobjects.divContainer.appendChild(btnName);
                 }else{
                     this.quizTakerName = localStorage.getItem('quiztakername');
                     this.init();
@@ -309,19 +360,20 @@
                 }
             },
             submitName: function () {
-                var txtName = document.getElementById("txtName");
-                var btnName = document.getElementById("btnName");
+                var txtName = document.getElementById("txtName-" + this.quizID);
+                var btnName = document.getElementById("btnName-" + this.quizID);
                 btnName.onclick = null;
                 txtName.onkeyup = null;
                 localStorage.setItem("quiztakername",txtName.value);
                 objQuiz.setName(txtName.value);
 
-            },
-            divContainer: document.getElementById("quizContainer")
+            }
 
         };
 
-        objQuiz.loadQuiz();
+        objQuiz.loadQuiz("skateBoard","Old School Skateboarding Quiz");
+        objQuiz.loadQuiz("skateBoardingMore","Old School Skateboarding Quizssss");
+
 </script>
 
 </body>

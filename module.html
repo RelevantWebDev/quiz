@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="boot.css">
+    <style>
+        .tab-content {
+            padding:26px;
+        }
+        button {
+            margin-right: 10px;;
+        }
+        .overview{
+            border-top: 1px solid #ddd;
+            padding: 8px;
+            margin-top: 42px;
+        }
+        label {
+            margin-left:6px;
+            font-weight:normal;
+        }
+        .scoresheet {
+            margin-top:10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3 overview" id="overview">Some initial text.</div>
+            <div class="col-md-9">
+                <ul class="nav nav-tabs" id="myTab"></ul>
+                <div class="tab-content">
+                    <div id="quiz1" class="tab-pane fade active in">
+                        <div id="skateBoarding" class="quiz-container"></div>
+                    </div>
+                    <div id="quiz2" class="tab-pane fade">
+                        <div id="skateBoarding2" class="quiz-container"></div>
+                    </div>
+                    <div id="quiz3" class="tab-pane fade">
+                        <div id="skateBoarding3" class="quiz-container"></div>
+                    </div>
+                    <div id="quiz4" class="tab-pane fade">
+                        <div id="skateBoarding4" class="quiz-container"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script type="text/javascript" src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
+    <script type="text/javascript">
+//        $(document).ready(function(){
+//            $("#myTab").click(function(e){
+//                if(e.target.nodeName.toLocaleLowerCase() === "a"){
+//                    e.preventDefault();
+//                    $(e.target).tab('show');
+//                    document.title = e.target.innerHTML;
+//                    document.getElementById("overview").innerHTML = ""; // todo:  remove eventlisteners before clearing
+//                }
+//            });
+//        });
+
+        var Quiz = function Quiz(config){ // messing with named function expressions to see how it looks in debugging
+            // object globals
+            Quiz.instances = (Quiz.instances || 0) + 1;
+
+            // instance properties
+            this.instanceid = Quiz.instances;
+            this.tabid = config.tabid;
+            this.quizID = config.quizID;
+            this.divContainer = document.createElement("div");
+            this.questions = "";
+            this.quizTakerAnswers = [];
+            this.questionsSrc = config.questionsJSON;
+            this.btnScore = document.createElement("button");
+            this.divScoreSheet = "";
+            this.currentQuestion = 0;
+            this.json = "";
+            this.divOverview = document.getElementById("overview");
+        };
+
+        Quiz.prototype.tabChange = function tabChange(e){
+            if(e.target.nodeName.toLocaleLowerCase() === "a"){
+                e.preventDefault();
+                $(e.target).tab('show');
+                document.title = e.target.innerHTML;
+                document.getElementById("overview").innerHTML = ""; // todo:  remove eventlisteners before clearing
+                console.log(e.target.dataset.instancelocation);
+                var transferObject = arrayObjects[e.target.dataset.instancelocation];
+                this.populateScoreSheet.call(transferObject);
+            }
+        };
+
+        Quiz.prototype.init = function init(){
+            this.divContainer = document.getElementById(this.quizID);
+            //$("#" +this.quizID).before("<h1>" + this.quizName + "</h1>");
+            var xhr = new XMLHttpRequest();
+            var self = this;
+            xhr.onreadystatechange = function() {
+                if(xhr.readyState===4){
+                    var returnJSON = JSON.parse(xhr.responseText);
+                    self.json = returnJSON;
+                    self.questions = returnJSON.questions.slice(0);
+
+                    self.instanceid === 1 ? document.title = returnJSON.quiztitle : "";
+                    var arrayLocation = self.instanceid-1;
+                    $("#myTab").append("<li "+ (self.instanceid === 1 ? "class='active'" : "") + "><a href='#quiz" + self.instanceid + "' data-instancelocation='" + arrayLocation + "'>" + returnJSON.quiztitle + "</a></li>");
+                    $("#" +self.quizID).before("<p>" + returnJSON.quizdescription + "</p>");
+                    self.quizTakerAnswers.length = self.questions.length;
+                    // Make sure the answers array is initialized with actual values (just setting the length doesn't actually populate the array)
+                    for(var x = 0;x<self.quizTakerAnswers.length;x++){
+                        self.quizTakerAnswers[x] = undefined;
+                    }
+                    self.divContainer.innerHTML = "<button id='btnStart-" + self.quizID + "' class='btn btn-default'>Start This Quiz</button>";
+                    var btnStart = document.getElementById("btnStart-" + self.quizID);
+                    var quizTab = document.getElementById(self.tabid);
+                    quizTab.onclick = self.tabChange.bind(self);
+                    btnStart.onclick = self.startQuiz.bind(self);
+                }
+            };
+            xhr.open("GET",this.questionsSrc,true); //  setting false makes the call synchronous (wait until result is returned before continuing processing)
+            xhr.send(null);
+
+        };
+
+        Quiz.prototype.scoreQuiz = function scoreQuiz(){
+            var totalScore = 0,
+                    self = this;
+            this.questions.forEach(function(v,i){
+                if(+v.correctAnswer===+self.quizTakerAnswers[i]){ // using unary operator (for now) to force conversion to numeric [double check this if -1?]
+                    totalScore++;
+                }
+            });
+            var divScoreSheet = this.divScoreSheet;
+            var btnScore = this.btnScore;
+           // divScoreSheet.style.display = "none";
+            btnScore.style.display = "none";
+            this.divContainer.innerHTML =  "Your score for this quiz is: " + totalScore + "/" + this.questions.length;
+        };
+
+        Quiz.prototype.startQuiz = function startQuiz(e){
+            var btnClicked = e.target;
+            $(btnClicked).closest(".tab-pane").find("p").eq(0).hide();
+            var self = this;
+            this.divContainer.innerHTML = "Compiling questions... <span id=\"compile-" + this.quizID + "\"></span><br /><br> ";
+            var compile = document.getElementById("compile-" + this.quizID);
+            var intervalC = setInterval(function(){
+                if(compile.innerHTML==""){
+                    compile.innerHTML = "010110";
+                }
+                if(compile.innerHTML == "010110"){
+                    compile.innerHTML = "101001";
+                }else{
+                    compile.innerHTML = "010110";
+                }
+            },50);
+
+            setTimeout( function(){
+                clearInterval(intervalC);
+                self.getQuestion(); // todo: start here
+                self.populateScoreSheet();
+            },2000);
+        };
+
+        Quiz.prototype.getQuestion = function getQuestion(){
+           this.divContainer.innerHTML = "";
+            var currentIndex = this.currentQuestion,
+                    getAnswerHandler = this.getAnswer.bind(this),
+                    current = this.questions[currentIndex],
+                    divAnswers = document.createElement("div"),
+                    currentQuestionNumber = currentIndex+1;
+            if(this.divAnswers){
+                this.divAnswers.removeEventListener("click", getAnswerHandler);
+            }
+
+            this.divContainer.innerHTML = "<div id='questions-" + this.quizID + "' class='question-block' style='display:none;'><h4>QUESTION " + currentQuestionNumber + " (of " + this.questions.length + "):<br /><br />" + current.question + "</h4></div>";
+            var divQuestion = document.getElementById("questions-" + this.quizID);
+            divAnswers.id = "answers-" + this.quizID ;
+            divAnswers.addEventListener("click",getAnswerHandler);
+            divAnswers.classList.add("answers-block");
+            this.divAnswers = divAnswers;
+            divQuestion.appendChild(divAnswers);
+
+            current.choices.forEach(function(v,i){
+                var radioID =  "q-" + this.quizID + i;
+                var labelID =  "lbl-" + this.quizID + i;
+                var label = document.createElement("label");
+                var radioChoice = document.createElement("input");
+                label.id = labelID;
+                label.htmlFor = radioID;
+                radioChoice.name = "q" + currentIndex;
+                radioChoice.id = radioID;
+                radioChoice.type = "radio";
+                radioChoice.value = i;
+                if(!(typeof this.quizTakerAnswers == "undefined")){
+                    if(+this.quizTakerAnswers[currentIndex] === +i){
+                        radioChoice.checked = true;
+                    }
+                }
+
+                divAnswers.appendChild(radioChoice);
+                var cRadio = document.getElementById(radioID);
+                divAnswers.appendChild(label);
+                var cLabel = document.getElementById(labelID);
+                var htmlBR = document.createElement("br");
+                divAnswers.appendChild(htmlBR);
+                if(cRadio.checked){
+                    cLabel.style.fontWeight = "bold";
+                }
+                var labelText = document.createTextNode(v);
+                cLabel.appendChild(labelText);
+            },this);
+            var divNavContainer = document.createElement("div");
+            divNavContainer.id = "divNav";
+            divNavContainer.classList.add("divNav");
+            var btnBack = document.createElement("button");
+            btnBack.id = "btnBack";
+            btnBack.classList.add("btn","btn-default");
+            btnBack.innerHTML = "&lt; Previous Question";
+            btnBack.disabled = true;
+            var btnFwd = document.createElement("button");
+            btnFwd.id = "btnFwd";
+            btnFwd.innerHTML = "Next Question &gt";
+            btnFwd.classList.add("btn","btn-default");
+            btnFwd.disabled = true;
+            divNavContainer.appendChild(btnBack);
+            divNavContainer.appendChild(btnFwd);
+            divNavContainer.addEventListener("click",this.doNavigate.bind(this));
+            divAnswers.appendChild(divNavContainer);
+            this.displayNavButtons(btnBack,btnFwd);
+            $("#" + divQuestion.id).fadeIn("slow");
+        };
+
+        Quiz.prototype.getAnswer =  function getAnswer(e){ // listener for answers
+            var currentTarget = e.target,
+                self = this;
+            if(currentTarget.tagName.toLocaleLowerCase()==="input"){
+                var realCurrentQuestionIndex = this.currentQuestion;
+                this.quizTakerAnswers.splice(this.currentQuestion,1,currentTarget.value);
+                // clear styling
+                var answers = document.getElementsByTagName("label");
+                for(var i = 0;i<answers.length;++i){
+                    answers[i].style.fontWeight = "normal";
+                }
+                currentTarget.nextSibling.style.fontWeight = "bold";
+
+                if(!(realCurrentQuestionIndex == this.questions.length-1)){
+                    setTimeout(function(){
+                        self.currentQuestion += 1;
+                        self.getQuestion();
+                        self.populateScoreSheet();
+                    },500);
+
+                }else{
+                    // check to see if there are any un-answered questions
+                    self.populateScoreSheet();
+                }
+            }
+        };
+
+        Quiz.prototype.displayNavButtons = function displayNavButtons(bBack,bFwd) {
+            switch(this.currentQuestion) {
+                case -1:
+                    // do nothing
+                    break;
+                case 0:
+                    bFwd.disabled = false;
+                    break;
+                case this.questions.length - 1:
+                    bBack.disabled = false;
+                    break;
+                default:
+                    bBack.disabled = false;
+                    bFwd.disabled = false;
+                    // show both
+                    break;
+            }
+        };
+
+        Quiz.prototype.doNavigate = function doNavigate(e) {
+            var cTarget = e.target;
+            if(cTarget.id.toLocaleLowerCase() === "btnback"){
+                this.navigateQuiz(-1);
+            }
+            if(cTarget.id.toLocaleLowerCase() === "btnfwd"){
+                this.navigateQuiz(1);
+            }
+        };
+
+        Quiz.prototype.navigateQuiz = function(dir){
+            this.currentQuestion += dir;
+            this.getQuestion();
+        };
+
+        Quiz.prototype.populateScoreSheet =  function populateScoreSheet() {
+            this.divOverview.innerHTML = "";
+            // Score quiz button
+            $(this.divOverview).append("<button id='btnScore-" + this.quizID + "' class='btn btn-default' disabled>Score This Quiz</button>");
+            this.btnScore = document.getElementById('btnScore-' + this.quizID);
+            this.btnScore.onclick = this.scoreQuiz.bind(this);
+            // Scoresheet
+            $(this.divOverview).append("<div id='scoresheet-" + this.quizID + "' class='scoresheet'></div>")
+            this.divScoreSheet = document.getElementById('scoresheet-' + this.quizID);
+
+
+            var sSheet = this.divScoreSheet;
+            sSheet.innerHTML = "";
+            var iCount = 0;
+            this.quizTakerAnswers.forEach(function(v,i){
+                var myQuestion = document.createElement("div");
+                var sMessage = "";
+                if(typeof v !== "undefined"){
+                    myQuestion.style.fontWeight = "bold";
+                    sMessage = "(answered)";
+                    iCount++;
+                }else{
+                    myQuestion.style.fontWeight = "normal";
+                    myQuestion.style.fontStyle = "italic";
+                    myQuestion.style.color = "silver";
+                    sMessage = "[un-answered]";
+                }
+
+                myQuestion.innerHTML = "Question #" + (i+1) + " = " + sMessage + "";
+                sSheet.appendChild(myQuestion);
+            });
+            if(iCount===this.quizTakerAnswers.length){
+                var btnScoreMe = this.btnScore;
+                btnScoreMe.disabled = false;
+                btnScoreMe.classList.remove("btn-default");
+                btnScoreMe.classList.add("btn-success");
+                var scoreText = btnScoreMe.nextSibling;
+                scoreText.style.display = "inline-block";
+            }
+        };
+
+
+        var q1 = new Quiz({quizID:"skateBoarding",questionsJSON:"questions.json",tabid: "myTab"});
+        var q2 = new Quiz({quizID:"skateBoarding2",questionsJSON:"questions2.json",tabid: "myTab"});
+        var q3 = new Quiz({quizID:"skateBoarding3",questionsJSON:"questions.json",tabid: "myTab"});
+        var q4 = new Quiz({quizID:"skateBoarding4",questionsJSON:"questions2.json",tabid: "myTab"});
+
+        var arrayObjects = [q1,q2,q3,q4];
+
+        arrayObjects.forEach(function(v){
+            v.init();
+        });
+
+    </script>
+
+</body>
+</html>

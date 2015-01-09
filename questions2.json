@@ -1,9 +1,9 @@
 {
-  "quiztitle": "Old School Skateboarding",
-  "quizdescription": "Skateboarding is not a crime",
+  "quiztitle": "Classic Video Games",
+  "quizdescription": "Vintage coin-op video game quiz",
   "questions": [
 	{
-	  "question": "Who is the first skater to perform the \"McTwist\" on a half-pipe?",
+	  "question": "Who is the second skater to perform the \"McTwist\" on a half-pipe?",
 	  "choices": [
 		"Tony Hawk",
 		"Mark Gonzales",
